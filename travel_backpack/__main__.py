@@ -1,4 +1,4 @@
-'''Gereral helper functions from the backpack '''
+'''Gereral helper functions from the backpack'''
 
 time_to_string = lambda x: '%04d/%02d/%02d - %02d:%02d:%02d' % (x.year, x.month, x.day, x.hour, x.minute, x.second)
 
