@@ -1,6 +1,6 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
@@ -39,6 +39,16 @@ def time_now_to_string(separators=None, order=None, lengths=None):
             result += separators[i - 1]
         result += f'{{0:0{lengths[i]}d}}'.format(var_map[e])
     return result
+
+
+class Singleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+
+        return cls._instances[cls]
 
 
 def log_info(msg, file, print_to_console=True):
