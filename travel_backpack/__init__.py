@@ -51,11 +51,15 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-def log_info(msg, file, print_to_console=True):
-    msg = '[' + time_now_to_string() + '] ' + msg
-    if print_to_console: print(msg)
+def log_info(msg, file, print_to_console=True, print_time=True):
+    nmsg = '[' + time_now_to_string() + '] ' + msg
+    if print_to_console:
+        if print_time:
+            print(nmsg)
+        else:
+            print(msg)
     with open(file, "a+") as f:
-        f.write(msg + "\n")
+        f.write(nmsg + "\n")
 
 
 from functools import wraps
@@ -217,6 +221,7 @@ class Logger(object):
         if timestamp_func is None:
             import time
             timestamp_func = lambda: f'[{time.strftime("%d/%m/%Y")} at {time.strftime("%H:%M:%S")}] '
+            timestamp_func = lambda: f"[{time_now_to_string(separators=['/','/',' at ',':',':'])}] "
 
         if logpath is None:
             logpath = os.path.join(os.environ['userprofile'], os.path.basename(__file__) + '.log')
@@ -274,6 +279,17 @@ def threadpool(f, executor=None):
         return (executor or _DEFAULT_POOL).submit(f, *args, **kwargs)
 
     return wrap
+
+
+def thread_encapsulation(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        from threading import Thread
+        t = Thread(target=f, args=args, kwargs=kwargs)
+        t.start()
+        return t
+
+    return decorator
 
 
 def print_function_name(func_or_arg="", show_function_call=True, show_function_return=False):
