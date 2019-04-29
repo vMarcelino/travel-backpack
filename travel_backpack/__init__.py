@@ -1,6 +1,6 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '0.4.0'
+__version__ = '0.7.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
@@ -98,18 +98,27 @@ def format_exception_string(e):
     return s
 
 
-def except_and_print(func, raise_exception=False):
+def except_and_print(func, message=None, raise_exception=False):
     @wraps(func)
     def decorator(*args, **kwargs):
         try:
             return func(*args, **kwargs)
 
         except Exception as e:
+            if message is not None:
+                print(message)
             print(format_exception_string(e))
             if raise_exception:
                 raise
 
     return decorator
+
+
+def except_and_print_with_message(message, *args, **kwargs):
+    def eaprint(func, *args, **kwargs):
+        return except_and_print(func, *args, message=message, **kwargs)
+
+    return eaprint
 
 
 def supports_color():
@@ -133,6 +142,7 @@ class bcolors:
     OKBLUE = '\033[94m'
     OKGREEN = '\033[92m'
     WARNING = '\033[93m'
+    REDHIGHLIGHT = '\033[41m'
     FAIL = '\033[91m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
