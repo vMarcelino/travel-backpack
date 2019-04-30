@@ -1,6 +1,6 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '0.7.0'
+__version__ = '0.9.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
@@ -138,15 +138,39 @@ def supports_color():
 
 
 class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    REDHIGHLIGHT = '\033[41m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    HEADER = '\x1b[95m'
+    OKBLUE = '\x1b[94m'
+    OKGREEN = '\x1b[92m'
+    WARNING = '\x1b[93m'
+    REDHIGHLIGHT = '\x1b[41m'
+    FAIL = '\x1b[91m'
+    ENDC = '\x1b[0m'
+    BOLD = '\x1b[1m'
+    UNDERLINE = '\x1b[4m'
+
+    GRAY = '\x1b[90m'
+    RED = '\x1b[91m'
+    GREEN = '\x1b[92m'
+    YELLOW = '\x1b[93m'
+    BLUE = '\x1b[94m'
+    PURPLE = '\x1b[95m'
+    CYAN = '\x1b[96m'
+
+    BGGRAY = '\x1b[100m'
+    BGRED = '\x1b[101m'
+    BGGREEN = '\x1b[102m'
+    BGYELLOW = '\x1b[103m'
+    BGBLUE = '\x1b[104m'
+    BGPURPLE = '\x1b[105m'
+    BGCYAN = '\x1b[106m'
+    BGWHITE = '\x1b[107m'
+
+
+def colorize(text: str, color: str) -> str:
+    '''
+    Colorizes the input text with ANSI colors
+    '''
+    return color + text + bcolors.ENDC
 
 
 def copy(src, dst):
