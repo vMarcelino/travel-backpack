@@ -1,6 +1,6 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '0.10.0'
+__version__ = '0.11.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
@@ -53,15 +53,15 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-def check_and_raise(condition, exception_type: Exception = Exception, exception_content=None):
+def check_and_raise(condition, exception_content=None, exception_type: Exception = Exception):
     """Raises an exception when condition is not met
     
     Arguments:
         condition {Any} -- condition to check against
     
     Keyword Arguments:
-        exception_type {Exception} -- the exception type to be raised (default: {Exception})
         exception_content {Any} -- value that will be passed to exception initialization (default: {None})
+        exception_type {Exception} -- the exception type to be raised (default: {Exception})
     
     Raises:
         exception_type: the exception of type exception_type, given in the parameter
