@@ -1,10 +1,12 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '0.9.0'
+__version__ = '0.10.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
 time_to_string = lambda x: '%04d/%02d/%02d - %02d:%02d:%02d' % (x.year, x.month, x.day, x.hour, x.minute, x.second)
+
+from functools import wraps
 
 
 def time_now_to_string(separators=None, order=None, lengths=None):
@@ -51,6 +53,26 @@ class Singleton(type):
         return cls._instances[cls]
 
 
+def check_and_raise(condition, exception_type: Exception = Exception, exception_content=None):
+    """Raises an exception when condition is not met
+    
+    Arguments:
+        condition {Any} -- condition to check against
+    
+    Keyword Arguments:
+        exception_type {Exception} -- the exception type to be raised (default: {Exception})
+        exception_content {Any} -- value that will be passed to exception initialization (default: {None})
+    
+    Raises:
+        exception_type: the exception of type exception_type, given in the parameter
+    """
+    if not condition:
+        if exception_content is not None:
+            raise exception_type(exception_content)
+        else:
+            raise exception_type
+
+
 def log_info(msg, file, print_to_console=True, print_time=True):
     nmsg = '[' + time_now_to_string() + '] ' + msg
     if print_to_console:
@@ -60,9 +82,6 @@ def log_info(msg, file, print_to_console=True, print_time=True):
             print(msg)
     with open(file, "a+") as f:
         f.write(nmsg + "\n")
-
-
-from functools import wraps
 
 
 def multi_replace(text, dic):
