@@ -9,7 +9,7 @@ time_to_string = lambda x: '%04d/%02d/%02d - %02d:%02d:%02d' % (x.year, x.month,
 from functools import wraps
 
 
-def time_now_to_string(separators=None, order=None, lengths=None):
+def time_now_to_string(separators=None, order=None, lengths=None) -> str:
     if order is None:
         order = ['y', 'mo', 'd', 'h', 'mi', 's']
     if separators is None:
@@ -291,11 +291,12 @@ class Logger(object):
 
     def write(self, message):
         # Write to terminal
-        to_write_terminal = message
-        if self.timestamp_terminal:
-            to_write_terminal = to_write_terminal.replace('\n', f'\n{self.timestamp_func()}')
+        if self.terminal:
+            to_write_terminal = message
+            if self.timestamp_terminal:
+                to_write_terminal = to_write_terminal.replace('\n', f'\n{self.timestamp_func()}')
 
-        self.terminal.write(to_write_terminal)
+            self.terminal.write(to_write_terminal)
 
         # Write to log
         to_write_log = message
@@ -315,7 +316,9 @@ class Logger(object):
 
 def log_stdout(log_file):
     import sys
-    sys.stdout = Logger(log_file)
+    log = Logger(log_file)
+    sys.stdout = log
+    sys.stderr = log
 
 
 _DEFAULT_POOL = None
