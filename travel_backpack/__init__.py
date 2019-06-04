@@ -1,12 +1,14 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '0.12.0'
+__version__ = '0.13.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
 time_to_string = lambda x: '%04d/%02d/%02d - %02d:%02d:%02d' % (x.year, x.month, x.day, x.hour, x.minute, x.second)
 
 from functools import wraps
+from dataclasses import dataclass
+from typing import Any
 
 
 def time_now_to_string(separators=None, order=None, lengths=None) -> str:
@@ -94,6 +96,16 @@ def pp(*args, **kwargs):
     from pprint import PrettyPrinter
     pp = PrettyPrinter(indent=4).pprint
     pp(*args, **kwargs)
+
+
+@dataclass
+class VariableReferenceHolder:
+    """Holds a reference to a variable
+
+    Useful for passing as argument just like a
+    variable pointer or a variable reference in other languages
+    """
+    value: Any
 
 
 def decorate_all_methods(decorator):
@@ -268,7 +280,12 @@ def format_date_to_path(date):
 
 
 class Logger(object):
-    def __init__(self, logpath=None, logpath_last=None, timestamp_log=True, timestamp_terminal=True, timestamp_func=None):
+    def __init__(self,
+                 logpath=None,
+                 logpath_last=None,
+                 timestamp_log=True,
+                 timestamp_terminal=True,
+                 timestamp_func=None):
         import os
         import sys
         if timestamp_func is None:
