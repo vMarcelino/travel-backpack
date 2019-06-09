@@ -1,6 +1,6 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '0.13.0'
+__version__ = '0.14.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
@@ -204,9 +204,9 @@ def colorize(text: str, color: str) -> str:
     return color + text + bcolors.ENDC
 
 
-def copy(src, dst):
+def copy(src, dst, dst_is_file=True):
     import shutil
-    make_folder(dst, is_file=True)
+    make_folder(dst, is_file=dst_is_file)
     shutil.copy2(src, dst)
     return
 
