@@ -10,10 +10,60 @@ class VariableReferenceHolder:
     """
     value: Any
 
-def check_var_input(message: str, end: str = '\n -> '):
+class NoneClass:
+    pass
+
+def check_var_input(message: str, output_type=str, end: str = '\n -> ', type_error_message='Invalid type', confirm_answer=True, default=NoneClass, **binary_user_question_kwargs):
+    """A higher level of the input function.
+
+    Can check for type via output_type parameter, use a default value via
+    default parameter, confirm the answer via confirm_answer parameter and
+    set custom message parameters via end, type_error_message and kwargs
+    that are passed directily to travel_backpack.variables.binary_user_question
+
+    example usage:
+        get the port number for a server:
+        check_var_input('Server port:',output_type=int, confirm_anwer=False)
+        get the same port, but have a default specified
+        check_var_input('Server port:',output_type=int, confirm_anwer=False, default=80)
+        get the same port, but return None instead of '' in case the user does not enter any information
+        check_var_input('Server port:',output_type=int, confirm_anwer=False, default=None)
+    
+    Arguments:
+        message {str} -- The message that will be displayed to the user
+    
+    Keyword Arguments:
+        output_type {Any} -- The type to check against (default: {str})
+        end {str} -- The message appended to the end of message (default: {'\n -> '})
+        type_error_message {str} -- The message to be displayed in case the type does not match (default: {'Invalid type'})
+        confirm_answer {bool} -- Whether to confirm the answer after it is inputed (default: {True})
+        default {Any} -- What to return in case the user gives an empty response. travel_backpack.variables.NoneClass to disable this feature (default: {NoneClass})
+    
+    Returns:
+        Any -- Returns the type specified in output_type
+    """
     while True:
         v = input(message + end)
-        if binary_user_question(f'is {v} correct?'):
+
+        # if answer is empty and default is set, ans = default
+        if v == '' and default is not NoneClass:
+            v = default
+        else:
+            try:
+                v = output_type(v)
+            except:
+                print(type_error_message)
+                continue
+
+        if confirm_answer:
+            if 'message' not in binary_user_question_kwargs:
+                binary_user_question_kwargs['message'] = f'is {v} correct?'
+
+            if binary_user_question(**binary_user_question_kwargs):
+                return output_type(v)
+            else:
+                continue
+        else:
             return v
 
 
