@@ -1,6 +1,6 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 

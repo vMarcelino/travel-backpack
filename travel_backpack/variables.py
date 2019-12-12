@@ -13,7 +13,7 @@ class VariableReferenceHolder:
 class NoneClass:
     pass
 
-def check_var_input(message: str, output_type=str, end: str = '\n -> ', type_error_message='Invalid type', confirm_answer=True, default=NoneClass, **binary_user_question_kwargs):
+def check_var_input(message: str, output_type=str, end: str = '\n', question_start:str=' -> ', type_error_message='Invalid type', confirm_answer=True, default=NoneClass, show_default=True, **confirmation_binary_user_question_kwargs):
     """A higher level of the input function.
 
     Can check for type via output_type parameter, use a default value via
@@ -34,18 +34,26 @@ def check_var_input(message: str, output_type=str, end: str = '\n -> ', type_err
     
     Keyword Arguments:
         output_type {Any} -- The type to check against (default: {str})
-        end {str} -- The message appended to the end of message (default: {'\n -> '})
+        end {str} -- The message appended to the end of message before default value (default: {'\n'})
+        question_start {str} -- The message appended to the end of message after default value (default: {' -> '})
         type_error_message {str} -- The message to be displayed in case the type does not match (default: {'Invalid type'})
         confirm_answer {bool} -- Whether to confirm the answer after it is inputed (default: {True})
         default {Any} -- What to return in case the user gives an empty response. travel_backpack.variables.NoneClass to disable this feature (default: {NoneClass})
+        show_default {bool} -- Whether to show the default value on the question message (default: {True})
+        confirmation_binary_user_question_kwargs {kwarg} -- Arguments passed to the confirmation part
     
     Returns:
         Any -- Returns the type specified in output_type
     """
+    confirm_message_set = 'message' in confirmation_binary_user_question_kwargs
+    input_msg = message+end
+    if show_default and default != NoneClass:
+        input_msg += '(' + str(default) + ')'
+    input_msg += question_start
     while True:
         v = input(message + end)
 
-        # if answer is empty and default is set, ans = default
+        # if answer is empty and default is set: ans = default
         if v == '' and default is not NoneClass:
             v = default
         else:
@@ -56,10 +64,10 @@ def check_var_input(message: str, output_type=str, end: str = '\n -> ', type_err
                 continue
 
         if confirm_answer:
-            if 'message' not in binary_user_question_kwargs:
-                binary_user_question_kwargs['message'] = f'is {v} correct?'
+            if not confirm_message_set:
+                confirmation_binary_user_question_kwargs['message'] = f'is {v} correct?'
 
-            if binary_user_question(**binary_user_question_kwargs):
+            if binary_user_question(**confirmation_binary_user_question_kwargs):
                 return output_type(v)
             else:
                 continue
