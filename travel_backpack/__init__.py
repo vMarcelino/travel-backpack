@@ -5,6 +5,9 @@ __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
 from functools import wraps
+import inspect
+
+
 class Singleton(type):
     _instances = {}
 
@@ -27,20 +30,35 @@ def pp(*args, **kwargs):
     pp(*args, **kwargs)
 
 
-def decorate_all_methods(decorator):
-    def decorate(cls):
-        for attr in cls.__dict__:  # there's propably a better way to do this
-            if callable(getattr(cls, attr)):
-                print('setting', attr)
-                setattr(cls, attr, decorator(getattr(cls, attr)))
+def is_local_code(obj, *, module=None, path: str = None, name: str = None) -> bool:
+    import os
+    import sys
+
+    s = sum([module is not None, path is not None, name is not None])
+
+    if s == 0:
+        raise Exception('module, file or name must be given')
+    elif s > 1:
+        raise Exception('only one of the parameters can be used at the same time')
+    else:
+        if module:
+            return is_local_code(obj, path=inspect.getabsfile(module))
+
+        elif name:
+            return is_local_code(obj, module=sys.modules[name])
+
+        elif path:
+            topmost_dir = os.path.dirname(os.path.realpath(path))
+
+            if any([inspect.isfunction(obj), inspect.ismodule(obj), inspect.ismethod(obj)]):
+                module_path = os.path.realpath(inspect.getabsfile(obj))
+                return topmost_dir in module_path
+
             else:
-                print('ignoring', attr)
-        print(cls, type(cls), 'callable:', callable(cls))
-        return cls
+                raise NotImplementedError
 
-    return decorate
-
-
+        else:
+            raise Exception
 
 
 def supports_color():

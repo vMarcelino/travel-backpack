@@ -1,7 +1,18 @@
-
+from typing import List, Union
 time_to_string = lambda x: '%04d/%02d/%02d - %02d:%02d:%02d' % (x.year, x.month, x.day, x.hour, x.minute, x.second)
 
-def time_now_to_string(separators=None, order=None, lengths=None) -> str:
+def time_now_to_string(separators:List[str]=None, order:List[str]=None, lengths:Union[List[int], int]=None) -> str:
+    '''
+    defaults:
+
+    order = ['y', 'mo', 'd', 'h', 'mi', 's']
+    
+    separators = ['/', '/', ' - ', ':', ':', '.']
+    
+    lengths = [4, 2, 2, 2, 2, 2, 4]
+
+    Order can also be changed to show less data. If so, separators must be changed accordingly
+    '''
     if order is None:
         order = ['y', 'mo', 'd', 'h', 'mi', 's']
     if separators is None:
