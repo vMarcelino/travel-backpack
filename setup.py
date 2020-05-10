@@ -15,7 +15,7 @@ def read(filename):
 
 setup(
     name="travel-backpack",
-    version="1.3.1",
+    version="1.4.0",
     url="https://github.com/vMarcelino/travel-backpack",
     license='MIT',
     author="Victor Marcelino",

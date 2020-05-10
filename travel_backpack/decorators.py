@@ -1,4 +1,5 @@
 import inspect
+import functools
 
 
 def decorate_all_methods(decorator, ignore=['__repr__', '__str__']):
@@ -64,3 +65,32 @@ def decorate_all_modules_in_module(module, decorator, topmost_path=None, only_lo
             setattr(module, name, decorator(obj))
 
     return module
+
+
+def pure_property(func):
+    """A pure property assumes that the result of
+    a property will always be the same given a class
+    instance. Doing that, the pure property caches
+    the result on the first run and returns it in
+    the consecutives 
+
+    Arguments:
+        func {function} -- The function to be decorated. must have only self as argument
+
+    Returns:
+        function descriptor -- the function wrapped in this decorator and the property decorator
+    """
+
+    specific_name = f'__pure_{id(func)}'
+
+    @functools.wraps(func)
+    def pure_w(self):
+        if not hasattr(self, specific_name):
+            # print('returning calculated value')
+            setattr(self, specific_name, func(self))
+        # else:
+        #     print('returning cached value')
+
+        return getattr(self, specific_name)
+
+    return property(pure_w)
