@@ -1,5 +1,5 @@
 files = ['setup.py', 'pyproject.toml', 'travel_backpack/__init__.py']
-bump = [False, True, False]
+bump = [False, False, True]
 for fn in files:
     lines = ['ERROR']
     with open(fn, 'r') as f:

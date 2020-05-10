@@ -1,6 +1,8 @@
-
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar, Callable, Type, Union, Tuple
+T = TypeVar('T')
+
+
 @dataclass
 class VariableReferenceHolder:
     """Holds a reference to a variable
@@ -10,10 +12,20 @@ class VariableReferenceHolder:
     """
     value: Any
 
+
 class NoneClass:
     pass
 
-def check_var_input(message: str, output_type=str, end: str = '\n', question_start:str=' -> ', type_error_message='Invalid type', confirm_answer=True, default=NoneClass, show_default=True, **confirmation_binary_user_question_kwargs):
+
+def check_var_input(message: str,
+                    output_type: Union[Type[T], Tuple[Type[T], Callable[[str], T]]] = str,
+                    end: str = '\n',
+                    question_start: str = ' -> ',
+                    type_error_message: str = 'Invalid type',
+                    confirm_answer: bool = True,
+                    default: Union[T, Type[NoneClass]] = NoneClass,
+                    show_default: bool = True,
+                    **confirmation_binary_user_question_kwargs) -> T:
     """A higher level of the input function.
 
     Can check for type via output_type parameter, use a default value via
@@ -46,19 +58,27 @@ def check_var_input(message: str, output_type=str, end: str = '\n', question_sta
         Any -- Returns the type specified in output_type
     """
     confirm_message_set = 'message' in confirmation_binary_user_question_kwargs
-    input_msg = message+end
+    input_msg = message + end
     if show_default and default != NoneClass:
         input_msg += '(' + str(default) + ')'
     input_msg += question_start
+
+    if isinstance(output_type, (list, tuple)):
+        output_type, output_type_constructor = output_type
+    else:
+        output_type_constructor = output_type
+
     while True:
         v = input(message + end)
 
         # if answer is empty and default is set: ans = default
         if v == '' and default is not NoneClass:
-            v = default
+            result: T = default
         else:
             try:
-                v = output_type(v)
+                result = output_type_constructor(v)
+                if not isinstance(result, output_type):
+                    raise Exception
             except:
                 print(type_error_message)
                 continue
@@ -68,11 +88,11 @@ def check_var_input(message: str, output_type=str, end: str = '\n', question_sta
                 confirmation_binary_user_question_kwargs['message'] = f'is {v} correct?'
 
             if binary_user_question(**confirmation_binary_user_question_kwargs):
-                return output_type(v)
+                return result
             else:
                 continue
         else:
-            return v
+            return result
 
 
 def binary_user_question(message: str,
@@ -82,13 +102,13 @@ def binary_user_question(message: str,
                          false_message: str = 'n',
                          default: bool = True,
                          exact: bool = False,
-                         case_sensitive: bool = False):
+                         case_sensitive: bool = False) -> bool:
 
     y_n_question = f'[{true_message}]/{false_message}' if default is True else f'{true_message}/[{false_message}]'
 
     while True:
         ans = input(f'{message} {y_n_question}{end}')
-        if case_sensitive:
+        if not case_sensitive:
             ans, true_message, false_message = map(lambda s: s.lower(), (ans, true_message, false_message))
         if exact:
             if ans == true_message:
@@ -99,4 +119,3 @@ def binary_user_question(message: str,
             return ans != false_message if default is True else ans == true_message
 
         print(error_message)
-

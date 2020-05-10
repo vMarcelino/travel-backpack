@@ -1,7 +1,10 @@
 from typing import List, Union
 time_to_string = lambda x: '%04d/%02d/%02d - %02d:%02d:%02d' % (x.year, x.month, x.day, x.hour, x.minute, x.second)
 
-def time_now_to_string(separators:List[str]=None, order:List[str]=None, lengths:Union[List[int], int]=None) -> str:
+
+def time_now_to_string(separators: List[str] = None,
+                       order: List[str] = None,
+                       lengths: Union[List[int], int] = None) -> str:
     '''
     defaults:
 
@@ -44,6 +47,7 @@ def time_now_to_string(separators:List[str]=None, order:List[str]=None, lengths:
             result += separators[i - 1]
         result += f'{{0:0{lengths[i]}d}}'.format(var_map[e])
     return result
+
 
 def format_date_to_path(date):
     return date.replace('/', '-').replace(':', 'h').replace('_', ' ')
