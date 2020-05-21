@@ -1,5 +1,9 @@
 import inspect
 import functools
+import os
+from typing import Callable, Any, TypeVar
+T = TypeVar('T')
+U = TypeVar('U')
 
 
 def decorate_all_methods(decorator, ignore=['__repr__', '__str__']):
@@ -40,17 +44,17 @@ def decorate_all_modules_in_module(module, decorator, topmost_path=None, only_lo
     name_obj_pairs = [(name, getattr(module, name)) for name in dir(module)]
     filter_func = lambda pair: inspect.ismodule(pair[1])
 
+    topmost_dir = ''
     if only_local_code:
-        import os
         if topmost_path is None:
-            topmost_dir = os.path.dirname(os.path.realpath(module))
+            topmost_dir: str = os.path.dirname(os.path.realpath(module))
         else:
-            topmost_dir = os.path.dirname(os.path.realpath(topmost_path))
+            topmost_dir: str = os.path.dirname(os.path.realpath(topmost_path))
 
     for name, obj in filter(filter_func, name_obj_pairs):
         if only_local_code:
             try:
-                module_path = os.path.realpath(inspect.getabsfile(obj))
+                module_path: str = os.path.realpath(inspect.getabsfile(obj))
                 if topmost_dir in module_path:
                     # print('decorating module', name)
                     setattr(module, name, decorator(obj))
@@ -67,7 +71,7 @@ def decorate_all_modules_in_module(module, decorator, topmost_path=None, only_lo
     return module
 
 
-def pure_property(func):
+def pure_property(func: Callable[[U], T]) -> property:
     """A pure property assumes that the result of
     a property will always be the same given a class
     instance. Doing that, the pure property caches
@@ -84,7 +88,7 @@ def pure_property(func):
     specific_name = f'__pure_{id(func)}'
 
     @functools.wraps(func)
-    def pure_w(self):
+    def pure_w(self: U) -> T:
         if not hasattr(self, specific_name):
             # print('returning calculated value')
             setattr(self, specific_name, func(self))
@@ -93,4 +97,7 @@ def pure_property(func):
 
         return getattr(self, specific_name)
 
+    # p = pure_w
+    # pp = property(p)
+    # return pp
     return property(pure_w)
