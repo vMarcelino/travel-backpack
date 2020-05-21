@@ -1,4 +1,7 @@
 from functools import wraps
+from typing import Type, Union, TYPE_CHECKING, cast
+
+
 def format_exception_string(e):
     import traceback
     s = f'Error: {type(e)} {str(e)}\n'
@@ -28,23 +31,26 @@ def except_and_print_with_message(message, *args, **kwargs):
 
     return eaprint
 
-def check_and_raise(condition, exception_content=None, exception_type: Exception = Exception):
+
+def check_and_raise(condition: bool, exception: Union[Type[BaseException], BaseException] = Exception):
     """Raises an exception when condition is not met
     
     Arguments:
-        condition {Any} -- condition to check against
+        condition {bool} -- condition to check against
     
     Keyword Arguments:
-        exception_content {Any} -- value that will be passed to exception initialization (default: {None})
-        exception_type {Exception} -- the exception type to be raised (default: {Exception})
+        exception {Union[Type[Exception],Exception]} -- the exception type to be raised (default: {Exception})
     
     Raises:
         exception_type: the exception of type exception_type, given in the parameter
     """
     if not condition:
-        if exception_content is not None:
-            raise exception_type(exception_content)
+        if TYPE_CHECKING:
+            if isinstance(exception, BaseException):
+                exception = cast(BaseException, exception)
+                raise exception
+            else:
+                exception = cast(Type[BaseException], exception)
+                raise exception
         else:
-            raise exception_type
-
-
+            raise exception
