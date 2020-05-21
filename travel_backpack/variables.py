@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Any, TypeVar, Callable, Type, Union, Tuple
+from travel_backpack.exceptions import check_and_raise
+from typing import Any, Optional, Sequence, TypeVar, Callable, Type, Union, Tuple, cast, overload, NoReturn
 T = TypeVar('T')
 
 
@@ -13,86 +14,100 @@ class VariableReferenceHolder:
     value: Any
 
 
-class NoneClass:
+class Undefined:
     pass
 
 
-def check_var_input(message: str,
-                    output_type: Union[Type[T], Tuple[Type[T], Callable[[str], T]]] = str,
+@overload
+def ensure_type(obj: Any,
+                _type: Type[T],
+                output_type: None = None,
+                exception: Union[BaseException, Type[BaseException]] = TypeError) -> T:
+    ...
+@overload
+def ensure_type(obj: Any,
+                _type: Type[T],
+                output_type: Optional[Type] = None,
+                exception: Union[BaseException, Type[BaseException]] = TypeError) -> T:
+    ...
+
+@overload
+def ensure_type(obj: Any,
+                _type:Union[Type, Tuple[Type, ...]],
+                output_type: Type[T],
+                exception: Union[BaseException, Type[BaseException]] = TypeError) -> T:
+    ...
+
+
+def ensure_type(obj: Any,
+                _type: Union[Type[T], Union[Type, Tuple[Type, ...]]],
+                output_type: Optional[Type[T]] = None,
+                exception: Union[BaseException, Type[BaseException]] = TypeError) -> T:
+    # if output_type is None:
+    #     if isinstance(_type, Tuple):
+    #         raise ValueError('output_type must be set when more than one type is given')
+    #     else:
+    #         output_type = _type
+
+    if isinstance(exception, BaseException):  # is instance of exception
+        check_and_raise(isinstance(obj, _type), exception=exception)
+    else:  # is class
+        exception_message = f"Object of type {type(obj)} does not match type {_type}"
+        check_and_raise(isinstance(obj, _type), exception=exception(exception_message))
+
+    return cast(T, obj)
+
+
+def check_var_input(output_type: Type[T],
+                    message: str,
+                    type_error_message: str = 'Invalid type',
+                    type_constructor: Optional[Callable[[str], T]] = None,
                     end: str = '\n',
                     question_start: str = ' -> ',
-                    type_error_message: str = 'Invalid type',
-                    confirm_answer: bool = True,
-                    default: Union[T, Type[NoneClass]] = NoneClass,
+                    confirm_answer: bool = False,
+                    default: Union[T, Type[Undefined]] = Undefined,
                     show_default: bool = True,
                     **confirmation_binary_user_question_kwargs) -> T:
-    """A higher level of the input function.
 
-    Can check for type via output_type parameter, use a default value via
-    default parameter, confirm the answer via confirm_answer parameter and
-    set custom message parameters via end, type_error_message and kwargs
-    that are passed directily to travel_backpack.variables.binary_user_question
+    input_message = message + end
+    if show_default and default != Undefined:
+        input_message += '(' + str(default) + ')'
 
-    example usage:
-        get the port number for a server:
-        check_var_input('Server port:',output_type=int, confirm_anwer=False)
-        get the same port, but have a default specified
-        check_var_input('Server port:',output_type=int, confirm_anwer=False, default=80)
-        get the same port, but return None instead of '' in case the user does not enter any information
-        check_var_input('Server port:',output_type=int, confirm_anwer=False, default=None)
-    
-    Arguments:
-        message {str} -- The message that will be displayed to the user
-    
-    Keyword Arguments:
-        output_type {Any} -- The type to check against (default: {str})
-        end {str} -- The message appended to the end of message before default value (default: {'\n'})
-        question_start {str} -- The message appended to the end of message after default value (default: {' -> '})
-        type_error_message {str} -- The message to be displayed in case the type does not match (default: {'Invalid type'})
-        confirm_answer {bool} -- Whether to confirm the answer after it is inputed (default: {True})
-        default {Any} -- What to return in case the user gives an empty response. travel_backpack.variables.NoneClass to disable this feature (default: {NoneClass})
-        show_default {bool} -- Whether to show the default value on the question message (default: {True})
-        confirmation_binary_user_question_kwargs {kwarg} -- Arguments passed to the confirmation part
-    
-    Returns:
-        Any -- Returns the type specified in output_type
-    """
-    confirm_message_set = 'message' in confirmation_binary_user_question_kwargs
-    input_msg = message + end
-    if show_default and default != NoneClass:
-        input_msg += '(' + str(default) + ')'
-    input_msg += question_start
+    input_message += question_start
 
-    if isinstance(output_type, (list, tuple)):
-        output_type, output_type_constructor = output_type
+    if type_constructor is None:
+        _type_constructor = cast(Callable[[str], T], output_type)
     else:
-        output_type_constructor = output_type
+        _type_constructor = cast(Callable[[str], T], type_constructor)
 
     while True:
-        v = input(message + end)
+        raw_str_input = input(input_message)
 
         # if answer is empty and default is set: ans = default
-        if v == '' and default is not NoneClass:
-            result: T = default
+        if raw_str_input == '' and (default is not Undefined):
+            result = cast(T, default)
+
         else:
             try:
-                result = output_type_constructor(v)
-                if not isinstance(result, output_type):
-                    raise Exception
+                result = _type_constructor(raw_str_input)
+                ensure_type(result, output_type)
             except:
                 print(type_error_message)
                 continue
 
         if confirm_answer:
+            confirm_message_set = 'message' in confirmation_binary_user_question_kwargs
             if not confirm_message_set:
-                confirmation_binary_user_question_kwargs['message'] = f'is {v} correct?'
+                confirmation_binary_user_question_kwargs['message'] = f'is {result} correct?'
 
             if binary_user_question(**confirmation_binary_user_question_kwargs):
-                return result
+                break
             else:
                 continue
         else:
-            return result
+            break
+
+    return cast(T, result)
 
 
 def binary_user_question(message: str,
