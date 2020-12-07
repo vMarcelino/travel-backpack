@@ -34,6 +34,9 @@ class FutureChain(Generic[T]):
     def result(self):
         return self._inner_future.result()
 
+    def done(self):
+        return self._inner_future.done()
+
     def set_result(self, result: T):
         self._inner_future.set_result(result)
 
