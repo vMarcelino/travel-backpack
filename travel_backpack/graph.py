@@ -36,7 +36,7 @@ class GraphObject:
         instance_class = type(self)
         self.deleted = False
         if label is None:
-            label = instance_class.__name__
+            label = cast(str, instance_class.__name__)
 
         self.label = label
 
@@ -70,6 +70,10 @@ class GraphObject:
     def __repr__(self):
         return f'{self.label}'
 
+    @property
+    def query(self):
+        return Query(start=self)
+
     def delete(self):
         raise NotImplementedError
 
@@ -89,8 +93,22 @@ class EdgeLabelNotAllowed(Exception):
     ...
 
 
+TG_co = TypeVar('TG_co', bound=GraphObject, covariant=True)
+LabelType = Union[str, Type[TG_co]]
+LabelListType = Union[Iterable[LabelType], Callable[[], Iterable[LabelType]]]
+
+
 class Edge(GraphObject):
-    def __init__(self, label: str, source: 'Node', destination: 'Node'):
+    # whitelist or blacklist
+    __list_mode__: Literal['whitelist', 'blacklist'] = 'whitelist'
+    # if defined, all listed here will be in the list,
+    # regardless if it's source or destination.
+    # if None, disconsider this check
+    __node_list__: Optional[LabelListType] = None
+    __source_list__: Optional[LabelListType] = None
+    __destination_list__: Optional[LabelListType] = None
+
+    def __init__(self, label: str, source: Node, destination: Node):
         super().__init__(Edge, label=label)
         self._source = None
         self._destination = None
@@ -99,12 +117,13 @@ class Edge(GraphObject):
         self.destination = destination
 
     @property
-    def source(self) -> 'Node':
+    def source(self) -> Node:
         return ensure_type(self._source, Node)
 
     @source.setter
-    def source(self, new_source: 'Node'):
-        if new_source._is_edge_allowed(self.label, inbound=False):
+    def source(self, new_source: Node):
+        if self._is_label_allowed(new_source.label, self.__source_list__) and \
+           new_source._is_edge_allowed(self.label, inbound=False):
             if self._source is not None:
                 old_source = self.source
                 old_source.outbound.remove(self)
@@ -119,7 +138,8 @@ class Edge(GraphObject):
 
     @destination.setter
     def destination(self, new_destination: 'Node'):
-        if new_destination._is_edge_allowed(self.label, inbound=True):
+        if self._is_label_allowed(new_destination.label, self.__destination_list__) and \
+           new_destination._is_edge_allowed(self.label, inbound=True):
             if self._destination is not None:
                 old_destination = self.destination
                 old_destination.inbound.remove(self)
@@ -127,6 +147,24 @@ class Edge(GraphObject):
             self._destination = new_destination
         else:
             raise EdgeLabelNotAllowed(f'Inbound edge label is not allowed on this node: {self.label}')
+
+    def _is_label_allowed(self, label: str, label_list: Optional[LabelListType]) -> bool:
+        _all_labels = label_list_to_str_list(self.__node_list__)
+        if _all_labels is None:
+            _all_labels = []
+
+        _label_list = label_list_to_str_list(label_list)
+
+        if _label_list is None:
+            return True
+
+        _label_list += _all_labels
+        if self.__list_mode__ == 'whitelist':
+            allowed_labels = _label_list
+            return label in allowed_labels
+        else:
+            forbidden_labels = _label_list
+            return not (label in forbidden_labels)
 
     def delete(self):
         self.source.outbound.remove(self)
@@ -137,6 +175,35 @@ class Edge(GraphObject):
         # self.destination = None
 
 
+def label_type_to_str(label: LabelType) -> str:
+    if isinstance(label, str):
+        return label
+    elif issubclass(label, GraphObject):
+        return label.label
+    else:
+        raise TypeError(f'Expected either a str or a GraphObject. Got, {type(label)} {label}')
+
+
+def label_list_to_str_list(lst: Optional[LabelListType]) -> Optional[List[str]]:
+    op_label_list: Optional[Iterable[LabelType]]
+    if isinstance(lst, Callable):
+        op_label_list = lst()  # type: ignore
+    elif isinstance(lst, Iterable):
+        op_label_list = lst
+    elif lst is None:
+        op_label_list = None
+    else:
+        raise TypeError(f'Label list is not of supported type. Is {type(lst)}')
+
+    if op_label_list is not None:
+        label_list: List[str] = []
+        for element in op_label_list:
+            label_list.append(label_type_to_str(element))
+        return label_list
+    else:
+        return None
+
+
 class Node(GraphObject):
     # whitelist or blacklist
     __list_mode__: Literal['whitelist', 'blacklist'] = 'whitelist'
@@ -144,10 +211,10 @@ class Node(GraphObject):
     # if defined, all listed here will be in the list,
     # regardless if it's inbound or outbound.
     # if None, disconsider this check
-    __edge_list__: Optional[List[str]] = None
+    __edge_list__: Optional[LabelListType] = None
 
-    __inbound_edge_list__: Optional[List[str]] = None
-    __outbound_edge_list__: Optional[List[str]] = None
+    __inbound_edge_list__: Optional[LabelListType] = None
+    __outbound_edge_list__: Optional[LabelListType] = None
 
     def __init__(self, label: str = None):
         super().__init__(Node, label=label)
@@ -177,9 +244,10 @@ class Node(GraphObject):
 
     def _is_edge_allowed(self, label: str, inbound: bool):
         is_whitelist = self.__list_mode__ == 'whitelist'
-        _all = self.__edge_list__
-        _in = self.__inbound_edge_list__
-        _out = self.__outbound_edge_list__
+
+        _all = label_list_to_str_list(self.__edge_list__)
+        _in = label_list_to_str_list(self.__inbound_edge_list__)
+        _out = label_list_to_str_list(self.__outbound_edge_list__)
 
         if _all is not None:
             if inbound:
@@ -204,10 +272,6 @@ class Node(GraphObject):
                 else:
                     return True
 
-    @property
-    def query(self):
-        return Query(start=self)
-
     def delete(self):
         _outbound = self.outbound.copy()  # make a copy to iterate over
         for edge in _outbound:
@@ -220,7 +284,7 @@ class Node(GraphObject):
         Node.objects.remove(self)
         self.deleted = True
 
-    def copy_references(self, other: 'Node'):
+    def copy_references(self, other: Node):
         """Create new edges for the other node with
         the same label. Note that only the label is
         equal and no other attribute is copied
@@ -234,20 +298,22 @@ class Node(GraphObject):
         for e in self.outbound:
             other.add_edge(e.label, e.destination)
 
-    def move_references(self, other: 'Node'):
-        for e in self.inbound:
-            e.destination = other
+    def move_references(self, other: Node, outbound=True, inbound=True):
+        if inbound:
+            for e in self.inbound.copy():
+                e.destination = other
 
-        for e in self.outbound:
-            e.source = other
+        if outbound:
+            for e in self.outbound.copy():
+                e.source = other
 
-    def replace_with(self, other: 'Node'):
+    def replace_with(self, other: Node, **kwargs):
         """Moves the references and deletes the node
 
         Arguments:
             other {Node} -- The node to replace this one
         """
-        self.move_references(other)
+        self.move_references(other, **kwargs)
         self.delete()
 
     def get_all_linked(self):
@@ -264,7 +330,7 @@ class Node(GraphObject):
             nodes_to_explore = new_nodes_to_explore
         return all_nodes
 
-    def to_nx_graph(self):
+    def to_nx_graph(self, formatting=lambda x: x):
         all_nodes: Set[Node] = set()
         nodes_to_explore: Set[Node] = set([self])
         while len(nodes_to_explore) > 0:
@@ -280,21 +346,193 @@ class Node(GraphObject):
         links = []
         for node in all_nodes:
             for out in node.outbound:
-                links.append((node, out.destination, {'label': out.label}))
+                links.append((formatting(node), formatting(out.destination), {'label': out.label}))
 
         import networkx as nx
         g = nx.DiGraph()
         g.add_edges_from(links)
+
+        node_attrs = {}
+        for node in all_nodes:
+            node_attrs[formatting(node)] = {
+                'Label': node.label,
+                'type': node.label,
+                'description': str(node),
+                'id': node.graph_id
+            }
+
+        nx.set_node_attributes(g, node_attrs)
+
         return g
 
-    def to_image(self, destination: str):
+    def to_image(self, destination: str, pydot: bool = False):
         g = self.to_nx_graph()
-        from networkx.drawing.nx_pydot import to_pydot
-        pd = to_pydot(g)
-        pd.write_png(destination)
+        if pydot:
+            from networkx.drawing.nx_pydot import to_pydot
+            pd = to_pydot(g)
+            pd.write_png(destination)
+        else:
+            from networkx.drawing.nx_agraph import to_agraph
+            a = to_agraph(g)
+            # a.layout(prog='sfdp')
+            a.draw(destination, prog='fdp', args='-Goverlap=false -GK=2')
+
+    def to_gml(self, destination: str):
+        g = self.to_nx_graph(formatting=lambda n: str(n).replace('\n', ' - '))
+        from networkx import write_gml
+        write_gml(g, destination)
+
+    def to_3d_html(self, destination: str):
+        import networkx as nx
+        import math
+        import plotly.graph_objects as go
+        import plotly.offline
+        import matplotlib.pyplot as plt
+
+        def addEdge(start,
+                    end,
+                    edge_x,
+                    edge_y,
+                    lengthFrac=1,
+                    arrowPos=None,
+                    arrowLength=0.025,
+                    arrowAngle=30,
+                    dotSize=20):
+            """
+            @author: aransil
+            https://github.com/redransil/plotly-dirgraph/blob/master/addEdge.py
+            """
+            # Get start and end cartesian coordinates
+            x0, y0 = start
+            x1, y1 = end
+
+            # Incorporate the fraction of this segment covered by a dot into total reduction
+            length = math.sqrt((x1 - x0)**2 + (y1 - y0)**2)
+            dotSizeConversion = .0565 / 20  # length units per dot size
+            convertedDotDiameter = dotSize * dotSizeConversion
+            lengthFracReduction = convertedDotDiameter / length
+            lengthFrac = lengthFrac - lengthFracReduction
+
+            # If the line segment should not cover the entire distance, get actual start and end coords
+            skipX = (x1 - x0) * (1 - lengthFrac)
+            skipY = (y1 - y0) * (1 - lengthFrac)
+            x0 = x0 + skipX / 2
+            x1 = x1 - skipX / 2
+            y0 = y0 + skipY / 2
+            y1 = y1 - skipY / 2
+
+            # Append line corresponding to the edge
+            edge_x.append(x0)
+            edge_x.append(x1)
+            edge_x.append(None)  # Prevents a line being drawn from end of this edge to start of next edge
+            edge_y.append(y0)
+            edge_y.append(y1)
+            edge_y.append(None)
+
+            # Draw arrow
+            if not arrowPos == None:
+
+                # Find the point of the arrow; assume is at end unless told middle
+                pointx = x1
+                pointy = y1
+                eta = math.degrees(math.atan((x1 - x0) / (y1 - y0)))
+
+                if arrowPos == 'middle' or arrowPos == 'mid':
+                    pointx = x0 + (x1 - x0) / 2
+                    pointy = y0 + (y1 - y0) / 2
+
+                # Find the directions the arrows are pointing
+                signx = (x1 - x0) / abs(x1 - x0)
+                signy = (y1 - y0) / abs(y1 - y0)
+
+                # Append first arrowhead
+                dx = arrowLength * math.sin(math.radians(eta + arrowAngle))
+                dy = arrowLength * math.cos(math.radians(eta + arrowAngle))
+                edge_x.append(pointx)
+                edge_x.append(pointx - signx**2 * signy * dx)
+                edge_x.append(None)
+                edge_y.append(pointy)
+                edge_y.append(pointy - signx**2 * signy * dy)
+                edge_y.append(None)
+
+                # And second arrowhead
+                dx = arrowLength * math.sin(math.radians(eta - arrowAngle))
+                dy = arrowLength * math.cos(math.radians(eta - arrowAngle))
+                edge_x.append(pointx)
+                edge_x.append(pointx - signx**2 * signy * dx)
+                edge_x.append(None)
+                edge_y.append(pointy)
+                edge_y.append(pointy - signx**2 * signy * dy)
+                edge_y.append(None)
+
+            return edge_x, edge_y
+
+        nodeColor = 'Blue'
+        nodeSize = 20
+        lineWidth = 2
+        lineColor = '#000000'
+        g = self.to_nx_graph()
+        pos = nx.layout.spring_layout(g, iterations=10**3, seed=1337)
+
+        # tests:
+        # nx.draw(g, pos=nx.spring_layout(g, iterations=10**6, seed=1337))
+        # plt.draw()
+        # plt.show()
+        # end tests
+
+        for node in g.nodes:
+            g.nodes[node]['pos'] = [p for p in pos[node]]
+
+        # Make list of nodes for plotly
+        node_x = []
+        node_y = []
+        for node in g.nodes():
+            x, y = g.nodes[node]['pos']
+            node_x.append(x)
+            node_y.append(y)
+
+        # Make a list of edges for plotly, including line segments that result in arrowheads
+        edge_x = []
+        edge_y = []
+        for edge in g.edges():
+            # addEdge(start, end, edge_x, edge_y, lengthFrac=1, arrowPos = None, arrowLength=0.025, arrowAngle = 30, dotSize=20)
+            start = g.nodes[edge[0]]['pos']
+            end = g.nodes[edge[1]]['pos']
+            edge_x, edge_y = addEdge(start=start,
+                                     end=end,
+                                     edge_x=edge_x,
+                                     edge_y=edge_y,
+                                     lengthFrac=.99,
+                                     arrowPos='end',
+                                     arrowLength=.04,
+                                     arrowAngle=30,
+                                     dotSize=nodeSize)
+
+        edge_trace = go.Scatter(x=edge_x,
+                                y=edge_y,
+                                line=dict(width=lineWidth, color=lineColor),
+                                hoverinfo='none',
+                                mode='lines')
+
+        node_trace = go.Scatter(x=node_x,
+                                y=node_y,
+                                mode='markers',
+                                hoverinfo='text',
+                                marker=dict(showscale=False, color=nodeColor, size=nodeSize))
+
+        fig = go.Figure(data=[edge_trace, node_trace],
+                        layout=go.Layout(showlegend=False,
+                                         hovermode='closest',
+                                         margin=dict(b=20, l=5, r=5, t=40),
+                                         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                                         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
+
+        # Note: if you don't use fixed ratio axes, the arrows won't be symmetrical
+        fig.update_layout(yaxis=dict(scaleanchor="x", scaleratio=1), plot_bgcolor='rgb(255,255,255)')
+        plotly.offline.plot(fig)
 
     def to_interactive_html(self, destination: str):
-        from pyvis.network import Network
+        from pyvis.network import Network  # type: ignore
         G = Network(height='100%', width='100%', directed=True, bgcolor='#000000')
         G.toggle_stabilization(False)
 
@@ -365,6 +603,15 @@ class NodeList(Generic[TN], Node):
             return int(label[len(cls._base_label):])
         else:
             raise cls.LabelNotIndex('Label is not index')
+
+    @classmethod
+    def get_lists_that_contains(cls, item: Node, check_type: bool = False):
+        q = item.query.through_incoming_edge(lambda x: x.startswith(cls._base_label))
+        results = q.results
+        if check_type:
+            return {el.ensure_type(NodeList) for el in results}
+        else:
+            return cast(Set[NodeList], results)
 
     @property
     def items(self) -> List[TN]:
@@ -628,12 +875,25 @@ class Query:
             self.results = action(self.results)
         return self
 
-    def through_incoming_edge(self, edge_label: Union[str, None] = None) -> 'Query':
+    def through_incoming_edge(self, edge_label: Optional[Union[str, Callable[[str], bool]]] = None) -> 'Query':
+        if edge_label is None:
+            filter_func: Callable[[str], bool] = lambda x: True
+
+        elif isinstance(edge_label, Callable):
+            filter_func = cast(Callable[[str], bool], edge_label)
+
+        else:
+            filter_func = lambda x: x == edge_label
+
+        _filter_func: Callable[[Edge], bool] = lambda n: filter_func(n.label)
+
         def action(results):
             new_results = []
             for node in results:
                 if isinstance(node, Node):
-                    new_results += [e.source for e in node.inbound if e.label == edge_label or edge_label is None]
+                    # it's split in two lines to be easier to see the results in the debugger
+                    filtered_list = [e.source for e in filter(_filter_func, node.inbound)]
+                    new_results += filtered_list
 
             return new_results
 
@@ -733,7 +993,6 @@ def relation():
 
 
 ActionType = Callable[[Iterable[GraphObject]], Iterable[GraphObject]]
-
 
 # def filter_decorator(func: Callable[..., Tuple[Type[Query[TG]], ActionType]]) -> Callable[..., Query[TG]]:
 #     def wrapper(self, *args, **kwargs) -> Query[TG]:

@@ -24,23 +24,17 @@ def ensure_type(obj: Any,
                 output_type: None = None,
                 exception: Union[BaseException, Type[BaseException]] = TypeError) -> T:
     ...
-@overload
-def ensure_type(obj: Any,
-                _type: Type[T],
-                output_type: Optional[Type] = None,
-                exception: Union[BaseException, Type[BaseException]] = TypeError) -> T:
-    ...
 
 @overload
 def ensure_type(obj: Any,
-                _type:Union[Type, Tuple[Type, ...]],
+                _type:Union[Type, Tuple[Union[Type, None], ...]],
                 output_type: Type[T],
                 exception: Union[BaseException, Type[BaseException]] = TypeError) -> T:
     ...
 
 
 def ensure_type(obj: Any,
-                _type: Union[Type[T], Union[Type, Tuple[Type, ...]]],
+                _type: Union[Type[T], Union[Type, Tuple[Union[Type, None], ...]]],
                 output_type: Optional[Type[T]] = None,
                 exception: Union[BaseException, Type[BaseException]] = TypeError) -> T:
     # if output_type is None:
@@ -48,6 +42,11 @@ def ensure_type(obj: Any,
     #         raise ValueError('output_type must be set when more than one type is given')
     #     else:
     #         output_type = _type
+
+    if isinstance(_type, tuple) and None in _type:
+        if obj is None:
+            return None
+        _type = tuple(t for t in _type if t is not None)
 
     if isinstance(exception, BaseException):  # is instance of exception
         check_and_raise(isinstance(obj, _type), exception=exception)
@@ -109,28 +108,3 @@ def check_var_input(output_type: Type[T],
 
     return cast(T, result)
 
-
-def binary_user_question(message: str,
-                         end: str = '\n -> ',
-                         error_message: str = 'Invalid answer',
-                         true_message: str = 'y',
-                         false_message: str = 'n',
-                         default: bool = True,
-                         exact: bool = False,
-                         case_sensitive: bool = False) -> bool:
-
-    y_n_question = f'[{true_message}]/{false_message}' if default is True else f'{true_message}/[{false_message}]'
-
-    while True:
-        ans = input(f'{message} {y_n_question}{end}')
-        if not case_sensitive:
-            ans, true_message, false_message = map(lambda s: s.lower(), (ans, true_message, false_message))
-        if exact:
-            if ans == true_message:
-                return True
-            elif ans == false_message:
-                return False
-        else:
-            return ans != false_message if default is True else ans == true_message
-
-        print(error_message)
