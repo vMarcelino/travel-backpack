@@ -8,7 +8,6 @@ from typing import (
     Iterable,
     Iterator,
     List,
-    Literal,
     Optional,
     Sequence,
     Set,
@@ -19,6 +18,10 @@ from typing import (
     cast,
     overload,
 )
+try:
+    from typing import Literal
+except:
+    from typing_extensions import Literal
 
 from travel_backpack.exceptions import check_and_raise
 from travel_backpack.variables import ensure_type
@@ -720,7 +723,7 @@ class Query:
         self.lazy = lazy
         if self.lazy:
             if start is not None:
-                Exception("Start must be None when using lazy query")
+                raise Exception("Start must be None when using lazy query")
             else:
                 self._calls = []
 
@@ -730,7 +733,8 @@ class Query:
 
             elif isinstance(start, Iterable):
                 self.results = start
-
+            elif start is None:
+                raise Exception("Start cannot be None when using non-lazy query. Please include a start or use one of the static methods from_nodes() or from_node_label(label:str)")
             else:
                 raise Exception('Unknown type')
 
