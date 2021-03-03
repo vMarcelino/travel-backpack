@@ -748,13 +748,17 @@ class Query:
         check_and_raise(not self.lazy)
         self._results = set(value)
 
-    def results_lazy(self, start):
+    def results_lazy(self, start: Iterable[GraphObject]):
+        '''Gets the lazy query result given a start point'''
+        if isinstance(start, GraphObject):
+                start = [start]
         results = start
         for call in self._calls:
             results = call(results)
         return results
 
-    def execute(self, start) -> 'Query':
+    def execute(self, start: Iterable[GraphObject]) -> 'Query':
+        '''Creates a non-lazy query from a lazy query'''
         results = self.results_lazy(start)
         return Query(start=results)
 
@@ -928,7 +932,7 @@ class Query:
     def filter_by_relation(self, relation: Query) -> 'Query':
         check_and_raise(relation.lazy)
 
-        def action(results):
+        def action(results: Iterable[GraphObject]):
             new_results = []
 
             for element in results:
