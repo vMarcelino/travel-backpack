@@ -1,4 +1,5 @@
 from __future__ import annotations
+import functools
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -25,6 +26,11 @@ except:
 
 from travel_backpack.exceptions import check_and_raise
 from travel_backpack.variables import ensure_type
+
+
+def cache(func: T) -> T:
+    return functools.lru_cache(maxsize=None)(func)  # type: ignore
+
 
 T = TypeVar('T')
 TG = TypeVar('TG', bound='GraphObject')
@@ -579,6 +585,10 @@ class NotifyingSet(set, Generic[T]):
 
 
 class NodeList(Generic[TN], Node):
+    """Stores a list of nodes as a node.
+
+    This node does not support outgoing edges apart from its own internal ones.
+    """
     _base_label = 'node_list_item_'
 
     class LabelNotIndex(Exception):
@@ -620,13 +630,23 @@ class NodeList(Generic[TN], Node):
     def items(self) -> List[TN]:
         edges = sorted(self.query.to_outgoing_edge().results, key=lambda x: self.get_index_from_label(x.label))
         edges = cast(List[Edge], edges)
-        return [e.destination for e in edges]
+        return [cast(TN, e.destination) for e in edges]
+
+    def _get_real_index(self, index: int) -> int:
+        if index < 0:
+            index = len(self) + index
+
+        check_and_raise(0 <= index < len(self), IndexError)
+        return index
 
     def __len__(self) -> int:
-        return len(self.items)
+        return len(self.outbound)
 
     def __getitem__(self, index) -> TN:
-        return self.items[index]
+        index = self._get_real_index(index)
+        result = self.query.through_outgoing_edge(self.get_label_by_index(index)).one
+        result = cast(TN, result)
+        return result
 
     def __contains__(self, element) -> bool:
         return element in self.items
@@ -635,7 +655,7 @@ class NodeList(Generic[TN], Node):
         return iter(self.items)
 
     def __setitem__(self, index: int, value: TN) -> None:
-        check_and_raise(index < len(self))
+        index = self._get_real_index(index)
 
         # remove old item at index without reordering
         self._fix_ordering = False
@@ -657,7 +677,7 @@ class NodeList(Generic[TN], Node):
         self._adding = None
 
     def insert(self, index: int, item: Union[TN, Sequence[TN]]) -> None:
-        check_and_raise(index <= len(self))
+        index = self._get_real_index(index)
         if isinstance(item, Sequence):
             for i in reversed(item):
                 self.insert(index, i)
@@ -685,9 +705,13 @@ class NodeList(Generic[TN], Node):
     def remove(self, item: TN) -> None:
         self.pop(self.index(item))
 
-    def pop(self, index: int):
-        self.query.to_outgoing_edge(self.get_label_by_index(index)).one.delete()
-        # self._retract_on_index(index) # will be called from _on_item_remove
+    def pop(self, index: int = -1):
+        index = self._get_real_index(index)
+        edge = self.query.to_outgoing_edge(self.get_label_by_index(index)).one
+        edge = cast(Edge, edge)
+        item = edge.destination
+        edge.delete()
+        return item
 
     def _on_item_remove(self, edge_to_remove: Edge):
         if self._fix_ordering:
@@ -709,9 +733,9 @@ class NodeList(Generic[TN], Node):
             raise Exception('Appending edge does not match expected value')
 
     def _retract_on_index(self, index):
-        edges = [e for e in self.query.to_outgoing_edge().results if int(e.label) > index]
+        edges = [e for e in self.query.to_outgoing_edge().results if self.get_index_from_label(e.label) > index]
         for edge in edges:
-            edge.label = str(int(edge.label) - 1)
+            edge.label = self.get_label_by_index(self.get_index_from_label(edge.label) - 1)
 
 
 class QuantityError(Exception):
@@ -734,7 +758,9 @@ class Query:
             elif isinstance(start, Iterable):
                 self.results = start
             elif start is None:
-                raise Exception("Start cannot be None when using non-lazy query. Please include a start or use one of the static methods from_nodes() or from_node_label(label:str)")
+                raise Exception(
+                    "Start cannot be None when using non-lazy query. Please include a start or use one of the static methods from_nodes() or from_node_label(label:str)"
+                )
             else:
                 raise Exception('Unknown type')
 
@@ -751,7 +777,7 @@ class Query:
     def results_lazy(self, start: Iterable[GraphObject]):
         '''Gets the lazy query result given a start point'''
         if isinstance(start, GraphObject):
-                start = [start]
+            start = [start]
         results = start
         for call in self._calls:
             results = call(results)
