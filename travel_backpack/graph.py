@@ -705,11 +705,12 @@ class NodeList(Generic[TN], Node):
     def remove(self, item: TN) -> None:
         self.pop(self.index(item))
 
-    def pop(self, index: int = -1):
+    def pop(self, index: int = -1) -> TN:
         index = self._get_real_index(index)
         edge = self.query.to_outgoing_edge(self.get_label_by_index(index)).one
         edge = cast(Edge, edge)
         item = edge.destination
+        item = cast(TN, item)
         edge.delete()
         return item
 
