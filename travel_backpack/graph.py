@@ -26,6 +26,7 @@ except:
 
 from travel_backpack.exceptions import check_and_raise
 from travel_backpack.variables import ensure_type
+import uuid
 
 
 def cache(func: T) -> T:
@@ -1071,7 +1072,9 @@ class ContextList(Generic[T]):
 
 
 class GraphContext:
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: Optional[str] = None) -> None:
+        if name is None:
+            name = str(uuid.uuid4())
         self.name = name
         self.previous_context: Optional[str] = None
         self.active: bool = False
