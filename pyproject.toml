@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "travel-backpack"
-version = "3.2.2"
+version = "3.2.3"
 description = "Some very useful functions and classes to use in day-to-day"
 authors = ["Victor Marcelino"]
 license = "Apache-2.0"

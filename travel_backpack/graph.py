@@ -1095,5 +1095,5 @@ class GraphContext:
     def __enter__(self):
         self.activate()
 
-    def __exit__(self):
+    def __exit__(self, *args):
         self.deactivate()
