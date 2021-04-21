@@ -37,15 +37,19 @@ TG = TypeVar('TG', bound='GraphObject')
 TN = TypeVar('TN', bound='Node')
 
 
+def make_label_from_class(cls: Type) -> str:
+    return cls.__name__
+
+
 class GraphObject:
-    objects: List[TG] = []
+    objects: List[GraphObject] = []
     object_count = 0
 
     def __init__(self, object_base_class: Type[TG], label: Optional[str] = None):
         instance_class = type(self)
         self.deleted = False
         if label is None:
-            label = cast(str, instance_class.__name__)
+            label = make_label_from_class(instance_class)
 
         self.label = label
 
@@ -102,8 +106,7 @@ class EdgeLabelNotAllowed(Exception):
     ...
 
 
-TG_co = TypeVar('TG_co', bound=GraphObject, covariant=True)
-LabelType = Union[str, Type[TG_co]]
+LabelType = Union[str, Type[GraphObject], GraphObject]
 LabelListType = Union[Iterable[LabelType], Callable[[], Iterable[LabelType]]]
 
 
@@ -184,13 +187,20 @@ class Edge(GraphObject):
         # self.destination = None
 
 
-def label_type_to_str(label: LabelType) -> str:
-    if isinstance(label, str):
-        return label
-    elif issubclass(label, GraphObject):
-        return label.label
+def get_label(item: LabelType) -> str:
+    if isinstance(item, str):
+        return item
+
+    elif isinstance(item, type) and issubclass(item, GraphObject):
+        return make_label_from_class(item)
+
+    elif hasattr(item, 'label'):
+        return ensure_type(item.label, str)
+
     else:
-        raise TypeError(f'Expected either a str or a GraphObject. Got, {type(label)} {label}')
+        raise TypeError(
+            f'Expected either a str, a GraphObject-inherited class or a GraphObject-inherited instance. Got, {type(item)} {item}'
+        )
 
 
 def label_list_to_str_list(lst: Optional[LabelListType]) -> Optional[List[str]]:
@@ -207,7 +217,7 @@ def label_list_to_str_list(lst: Optional[LabelListType]) -> Optional[List[str]]:
     if op_label_list is not None:
         label_list: List[str] = []
         for element in op_label_list:
-            label_list.append(label_type_to_str(element))
+            label_list.append(get_label(element))
         return label_list
     else:
         return None
@@ -232,11 +242,7 @@ class Node(GraphObject):
         self.outbound: Set[Edge] = set()
 
     def add_edge(self, edge_label: Union[str, Edge, Type[Edge]], to: Node, two_way=False):
-        if isinstance(edge_label, Edge):
-            edge_label = edge_label.label
-
-        elif (not isinstance(edge_label, str)) and issubclass(edge_label, Edge):
-            edge_label = edge_label.__name__
+        edge_label = get_label(edge_label)
 
         # will raise an error if edge label is not allowed
         edge = Edge(source=self, destination=to, label=edge_label)
@@ -980,10 +986,7 @@ class Query:
         def action(results):
             new_results = []
             for label in labelss:  # weird pyright error
-                if isinstance(label, GraphObject):
-                    label = label.label
-                elif (not isinstance(label, str)) and issubclass(label, GraphObject):
-                    label = label.__name__
+                label = get_label(label)
 
                 new_results += [r for r in results if r.label == label]
 
