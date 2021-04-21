@@ -42,7 +42,7 @@ def make_label_from_class(cls: Type) -> str:
 
 
 class GraphObject:
-    objects: List[GraphObject] = []
+    objects: ContextList[GraphObject] = []  # type: ignore
     object_count = 0
 
     def __init__(self, object_base_class: Type[TG], label: Optional[str] = None):
@@ -55,7 +55,7 @@ class GraphObject:
 
         if object_base_class.objects == []:
             # initialize the object
-            object_base_class.objects = []
+            object_base_class.objects = ContextList()
             object_base_class.object_count = 0
 
         object_base_class.objects.append(self)
@@ -756,7 +756,7 @@ class Query:
             if start is not None:
                 raise Exception("Start must be None when using lazy query")
             else:
-                self._calls = []
+                self._calls: List[Callable[[Iterable[GraphObject]], Iterable[GraphObject]]] = []
 
         else:
             if isinstance(start, GraphObject):
@@ -781,7 +781,7 @@ class Query:
         check_and_raise(not self.lazy)
         self._results = set(value)
 
-    def results_lazy(self, start: Iterable[GraphObject]):
+    def results_lazy(self, start: Union[GraphObject, Iterable[GraphObject]]):
         '''Gets the lazy query result given a start point'''
         if isinstance(start, GraphObject):
             start = [start]
@@ -790,7 +790,7 @@ class Query:
             results = call(results)
         return results
 
-    def execute(self, start: Iterable[GraphObject]) -> 'Query':
+    def execute(self, start: Union[GraphObject, Iterable[GraphObject]]) -> 'Query':
         '''Creates a non-lazy query from a lazy query'''
         results = self.results_lazy(start)
         return Query(start=results)
@@ -1044,4 +1044,53 @@ ActionType = Callable[[Iterable[GraphObject]], Iterable[GraphObject]]
 #             q = q_type(start=action(self.results))
 #             return q
 
+
 #     return wrapper
+class ContextList(Generic[T]):
+    active_context: Optional[str] = None
+
+    def __init__(self):
+        self.contexts: dict[Any, list[T]] = {}
+
+    def append(self, item: T):
+        return self.get_list().append(item)
+
+    def remove(self, item: T):
+        return self.get_list().remove(item)
+
+    def __iter__(self):
+        return self.get_list().__iter__()
+
+    def __len__(self):
+        return self.get_list().__len__()
+
+    def get_list(self) -> list[T]:
+        if ContextList.active_context not in self.contexts:
+            self.contexts[ContextList.active_context] = []
+        return self.contexts[ContextList.active_context]
+
+
+class GraphContext:
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.previous_context: Optional[str] = None
+        self.active: bool = False
+
+    def activate(self):
+        if self.active:
+            raise Exception('This context is already active')
+        self.active = True
+        self.previous_context = ContextList.active_context
+        ContextList.active_context = self.name
+
+    def deactivate(self):
+        if not self.active:
+            raise Exception('This context is not active')
+        self.active = False
+        ContextList.active_context = self.previous_context
+
+    def __enter__(self):
+        self.activate()
+
+    def __exit__(self):
+        self.deactivate()
