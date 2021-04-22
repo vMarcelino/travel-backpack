@@ -1076,21 +1076,14 @@ class GraphContext:
         if name is None:
             name = str(uuid.uuid4())
         self.name = name
-        self.previous_context: Optional[str] = None
-        self.active: bool = False
+        self.previous_contexts: list[Optional[str]] = []
 
     def activate(self):
-        if self.active:
-            raise Exception('This context is already active')
-        self.active = True
-        self.previous_context = ContextList.active_context
+        self.previous_contexts.append(ContextList.active_context)
         ContextList.active_context = self.name
 
     def deactivate(self):
-        if not self.active:
-            raise Exception('This context is not active')
-        self.active = False
-        ContextList.active_context = self.previous_context
+        ContextList.active_context = self.previous_contexts.pop()
 
     def __enter__(self):
         self.activate()
