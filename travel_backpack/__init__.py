@@ -97,6 +97,7 @@ class bcolors:
     CYAN = '\x1b[96m'
 
     BGGRAY = '\x1b[100m'
+    BGBLACK = '\x1b[40m'
     BGRED = '\x1b[101m'
     BGGREEN = '\x1b[102m'
     BGYELLOW = '\x1b[103m'
