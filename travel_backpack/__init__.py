@@ -1,6 +1,6 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '3.3.2'
+__version__ = '3.4.0'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
@@ -78,35 +78,65 @@ def supports_color():
 
 
 class bcolors:
+    ENDC = '\x1b[0m'
+
+    # some commonly used
     HEADER = '\x1b[95m'
     OKBLUE = '\x1b[94m'
     OKGREEN = '\x1b[92m'
     WARNING = '\x1b[93m'
     REDHIGHLIGHT = '\x1b[41m'
     FAIL = '\x1b[91m'
-    ENDC = '\x1b[0m'
-    BOLD = '\x1b[1m'
-    UNDERLINE = '\x1b[4m'
 
-    GRAY = '\x1b[90m'
-    RED = '\x1b[91m'
-    GREEN = '\x1b[92m'
-    YELLOW = '\x1b[93m'
-    BLUE = '\x1b[94m'
-    PURPLE = '\x1b[95m'
-    CYAN = '\x1b[96m'
+    # font attributes
+    BOLD = '\x1b[1m'
+    BOLD_OFF = '\x1b[21m'
+    UNDERLINE = '\x1b[4m'
+    UNDERLINE_OFF = '\x1b[24m'
+    BLINK = '\x1b[5m'
+    BLINK_OFF = '\x1b[21m'
+
+    # foreground colors
     BLACK = '\x1b[30m'
+    RED = '\x1b[31m'
+    GREEN = '\x1b[32m'
+    YELLOW = '\x1b[33m'
+    BLUE = '\x1b[34m'
+    MAGENTA = '\x1b[35m'
+    CYAN = '\x1b[36m'
     WHITE = '\x1b[37m'
 
-    BGGRAY = '\x1b[100m'
+    DEFAULT = '\x1b[39m'
+
+    GRAY_LIGHT = '\x1b[90m'
+    RED_LIGHT = '\x1b[91m'
+    GREEN_LIGHT = '\x1b[92m'
+    YELLOW_LIGHT = '\x1b[93m'
+    BLUE_LIGHT = '\x1b[94m'
+    MAGENTA_LIGHT = '\x1b[95m'
+    CYAN_LIGHT = '\x1b[96m'
+    WHITE_LIGHT = '\x1b[97m'
+
+    # background colors
     BGBLACK = '\x1b[40m'
-    BGRED = '\x1b[101m'
-    BGGREEN = '\x1b[102m'
-    BGYELLOW = '\x1b[103m'
-    BGBLUE = '\x1b[104m'
-    BGPURPLE = '\x1b[105m'
-    BGCYAN = '\x1b[106m'
-    BGWHITE = '\x1b[107m'
+    BGRED = '\x1b[41m'
+    BGGREEN = '\x1b[42m'
+    BGYELLOW = '\x1b[43m'
+    BGBLUE = '\x1b[44m'
+    BGMAGENTA = '\x1b[45m'
+    BGCYAN = '\x1b[46m'
+    BGWHITE = '\x1b[47m'
+
+    BGDEFAULT = '\x1b[49m'
+
+    BGGRAY_LIGHT = '\x1b[100m'
+    BGRED_LIGHT = '\x1b[101m'
+    BGGREEN_LIGHT = '\x1b[102m'
+    BGYELLOW_LIGHT = '\x1b[103m'
+    BGBLUE_LIGHT = '\x1b[104m'
+    BGMAGENTA_LIGHT = '\x1b[105m'
+    BGCYAN_LIGHT = '\x1b[106m'
+    BGWHITE_LIGHT = '\x1b[107m'
 
 
 def colorize(text: str, color: str) -> str:
