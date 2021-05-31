@@ -1,4 +1,5 @@
 from typing import List, Union
+
 time_to_string = lambda x: '%04d/%02d/%02d - %02d:%02d:%02d' % (x.year, x.month, x.day, x.hour, x.minute, x.second)
 
 
@@ -22,7 +23,7 @@ def time_now_to_string(separators: List[str] = None,
         separators = ['/', '/', ' - ', ':', ':', '.']
     if lengths is None:
         lengths = [4, 2, 2, 2, 2, 2, 4]
-    elif type(lengths) is int:
+    elif isinstance(lengths, int):
         lengths = [lengths] * len(order)
 
     if len(separators) < len(order) - 1:
