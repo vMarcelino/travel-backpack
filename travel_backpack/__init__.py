@@ -1,6 +1,6 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '3.3.1'
+__version__ = '3.3.2'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
@@ -95,6 +95,7 @@ class bcolors:
     BLUE = '\x1b[94m'
     PURPLE = '\x1b[95m'
     CYAN = '\x1b[96m'
+    BLACK = '\x1b[30m'
     WHITE = '\x1b[37m'
 
     BGGRAY = '\x1b[100m'
