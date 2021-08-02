@@ -1,11 +1,12 @@
 """travel-backpack - Some very useful functions and classes to use in day-to-day"""
 
-__version__ = '3.4.0'
+__version__ = '3.4.1'
 __author__ = 'Victor Marcelino <victor.fmarcelino@gmail.com>'
 __all__ = []
 
 from functools import wraps
 import inspect
+from typing import Sequence
 
 
 class Singleton(type):
@@ -144,6 +145,22 @@ def colorize(text: str, color: str) -> str:
     Colorizes the input text with ANSI colors
     '''
     return color + text + bcolors.ENDC
+
+
+def table_print(arr: 'Sequence[Sequence[str]]', colors:'tuple[str,...]'=(bcolors.WHITE, bcolors.GRAY_LIGHT)):
+    line_count = len(arr)
+    col_count = len(arr[0])
+    col_size = [0] * col_count
+    for i in range(col_count):
+        for j in range(line_count):
+            col_size[i] = max(col_size[i], len(arr[j][i]))
+
+    for j, line in enumerate(arr):
+        color = colors[j % len(colors)]
+        for i, item in enumerate(line):
+            print(colorize(item.rjust(col_size[i], ' '), color), end='  |  ')
+            if i == col_count - 1:
+                print()
 
 
 def copy(src, dst, dst_is_file=True):
